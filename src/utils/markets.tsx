@@ -42,6 +42,7 @@ import { WRAPPED_SOL_MINT } from '@project-serum/serum/lib/token-instructions';
 import { Order } from '@project-serum/serum/lib/market';
 import BonfidaApi from './bonfidaConnector';
 import { sleep } from './utils';
+import { useSerumVialMarketData } from './serum-vial';
 
 // Used in debugging, should be false in production
 const _IGNORE_DEPRECATED = false;
@@ -51,7 +52,10 @@ export const USE_MARKETS: MarketInfo[] = _IGNORE_DEPRECATED
   : MARKETS;
 
 export function useMarketsList() {
-  return USE_MARKETS.filter(({ name, deprecated }) => !deprecated && !process.env.REACT_APP_EXCLUDE_MARKETS?.includes(name));
+  return USE_MARKETS.filter(
+    ({ name, deprecated }) =>
+      !deprecated && !process.env.REACT_APP_EXCLUDE_MARKETS?.includes(name),
+  );
 }
 
 export function useAllMarkets() {
@@ -320,12 +324,11 @@ export function useMarket() {
 export function useMarkPrice() {
   const [markPrice, setMarkPrice] = useState<null | number>(null);
 
-  const [orderbook] = useOrderbook();
-  const trades = useTrades();
+  const { orderBook, trades } = useSerumVialMarketData();
 
   useEffect(() => {
-    let bb = orderbook?.bids?.length > 0 && Number(orderbook.bids[0][0]);
-    let ba = orderbook?.asks?.length > 0 && Number(orderbook.asks[0][0]);
+    let bb = orderBook?.bids?.length > 0 && Number(orderBook.bids[0][0]);
+    let ba = orderBook?.asks?.length > 0 && Number(orderBook.asks[0][0]);
     let last = trades && trades.length > 0 && trades[0].price;
 
     let markPrice =
@@ -336,7 +339,7 @@ export function useMarkPrice() {
         : null;
 
     setMarkPrice(markPrice);
-  }, [orderbook, trades]);
+  }, [orderBook, trades]);
 
   return markPrice;
 }

@@ -24,6 +24,7 @@ import {
 import CustomMarketDialog from '../components/CustomMarketDialog';
 import { notify } from '../utils/notifications';
 import { useHistory, useParams } from 'react-router-dom';
+import { SerumVialProvider } from '../utils/serum-vial';
 
 const { Option, OptGroup } = Select;
 
@@ -54,7 +55,9 @@ export default function TradePage() {
       marketAddress={marketAddress}
       setMarketAddress={setMarketAddress}
     >
-      <TradePageInner />
+      <SerumVialProvider>
+        <TradePageInner />
+      </SerumVialProvider>
     </MarketProvider>
   );
 }
