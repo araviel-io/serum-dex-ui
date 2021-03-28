@@ -9,17 +9,11 @@ class SerumVialClient {
   private _disposed = false;
 
   public streamData(
-    channel: string,
+    channels: string[],
     markets: string[],
     onmessage: (message: any) => void,
   ) {
     this._ws = new WebSocket(WS_URL);
-
-    const subPayload = JSON.stringify({
-      op: 'subscribe',
-      channel,
-      markets,
-    });
 
     this._ws.onmessage = (msg) => {
       onmessage(JSON.parse(msg.data));
@@ -33,15 +27,28 @@ class SerumVialClient {
       console.log(
         `Connection to ${WS_URL} closed, code: ${ev.code}. Restarting....`,
       );
-      this.streamData(channel, markets, onmessage);
+
+      this.streamData(channels, markets, onmessage);
     };
+
+    const subPayloads = channels.map((channel) => {
+      return JSON.stringify({
+        op: 'subscribe',
+        channel,
+        markets,
+      });
+    });
 
     if (this._ws.readyState !== WebSocket.OPEN) {
       this._ws.onopen = () => {
-        this._ws!.send(subPayload);
+        for (const subRequest of subPayloads) {
+          this._ws!.send(subRequest);
+        }
       };
     } else {
-      this._ws.send(subPayload);
+      for (const subRequest of subPayloads) {
+        this._ws.send(subRequest);
+      }
     }
 
     return () => {
@@ -74,7 +81,7 @@ export function SerumVialProvider({ children }) {
     const orderBook = new OrderBook();
 
     const dispose = serumVialClient.streamData(
-      'level2',
+      ['trades', 'level2'],
       [name],
       (
         message:
@@ -104,7 +111,11 @@ export function SerumVialProvider({ children }) {
       },
     );
 
-    return dispose;
+    return () => {
+      setTrades([]);
+      setOrderBook({ asks: [], bids: [] });
+      dispose();
+    };
     // eslint-disable-next-line
   }, [name]);
 
@@ -243,7 +254,7 @@ type OrderBookState = {
 
 type SerumVialRecentTradesMessage = {
   readonly type: 'recent_trades';
-  readonly symbol: string;
+  readonly market: string;
   readonly trades: SerumVialTradeMessage[];
   readonly timestamp: string;
 };
@@ -254,7 +265,7 @@ type SerumVialTradeMessage = {
   readonly size: string;
   readonly side: 'buy' | 'sell';
   readonly id: string;
-  readonly symbol: string;
+  readonly market: string;
   readonly version: number;
   readonly slot: number;
   readonly timestamp: string;
@@ -264,7 +275,7 @@ type SerumVialL2Message = {
   readonly type: 'l2snapshot' | 'l2update';
   readonly asks: [string, string][];
   readonly bids: [string, string][];
-  readonly symbol: string;
+  readonly market: string;
   readonly version: number;
   readonly slot: number;
   readonly timestamp: string;
